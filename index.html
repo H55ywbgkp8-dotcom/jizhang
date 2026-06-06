@@ -228,7 +228,7 @@ header .date{font-size:0.85rem;color:#999;margin-top:2px}
   <div class="manual-section">
     <div class="manual-form">
       <div class="amount-row">
-        <input type="number" id="inputAmount" placeholder="输入金额" inputmode="decimal" step="0.01">
+        <input type="text" id="inputAmount" placeholder="输入金额" inputmode="decimal" pattern="\d*\.?\d*" autocomplete="off">
         <span class="currency">元</span>
       </div>
       <div class="cat-row">
