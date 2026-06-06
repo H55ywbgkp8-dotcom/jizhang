@@ -1,5 +1,5 @@
-const CACHE_NAME = 'jizhang-v2';
-const ASSETS = ['./', './index.html'];
+const CACHE_NAME = 'jizhang-v3';
+const ASSETS = ['./', './index.html', './data.js'];
 
 // Install: cache assets for offline use
 self.addEventListener('install', (e) => {
