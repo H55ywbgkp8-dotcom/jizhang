@@ -98,13 +98,6 @@ header .date{font-size:0.85rem;color:#999;margin-top:2px}
 }
 .cat-btn.selected{border-color:#e67e22;background:#fef5ec;color:#e67e22;font-weight:600}
 .cat-btn.income-btn.selected{border-color:#27ae60;background:#edfaf0;color:#27ae60}
-.note-row input{
-  width:100%;padding:10px 14px;border:2px solid #e8e8e8;
-  border-radius:12px;font-size:0.95rem;outline:none;
-  margin-bottom:10px;
-  -webkit-appearance:none;appearance:none;
-}
-.note-row input:focus{border-color:#e67e22}
 .card-row{
   display:flex;align-items:center;gap:8px;margin-bottom:12px;
   font-size:0.9rem;color:#666;
@@ -244,6 +237,12 @@ header .date{font-size:0.85rem;color:#999;margin-top:2px}
   <!-- Manual Input -->
   <div class="manual-section">
     <div class="manual-form">
+      <div class="cat-row">
+        <button class="cat-btn selected" data-cat="购物">🛍 购物</button>
+        <button class="cat-btn" data-cat="餐饮">🍜 餐饮</button>
+        <button class="cat-btn" data-cat="家庭">🏠 家庭</button>
+        <button class="cat-btn income-btn" data-cat="收入">💰 收入</button>
+      </div>
       <div class="amount-display">
         <div class="value placeholder" id="amountDisplay">输入金额</div>
         <span class="currency">元</span>
@@ -261,15 +260,6 @@ header .date{font-size:0.85rem;color:#999;margin-top:2px}
         <button data-key="clear" class="btn-clear">清空</button>
         <button data-key="0">0</button>
         <button data-key="del" class="btn-del">⌫</button>
-      </div>
-      <div class="cat-row">
-        <button class="cat-btn selected" data-cat="餐饮">🍜 餐饮</button>
-        <button class="cat-btn" data-cat="购物">🛍 购物</button>
-        <button class="cat-btn" data-cat="家庭">🏠 家庭</button>
-        <button class="cat-btn income-btn" data-cat="收入">💰 收入</button>
-      </div>
-      <div class="note-row">
-        <input type="text" id="inputNote" placeholder="备注（选填）">
       </div>
       <div class="card-row">
         <input type="checkbox" id="inputCard">
@@ -543,7 +533,7 @@ function showDialog(title, msg) {
 // MANUAL INPUT
 // ============================================================
 // Category selection
-let selectedCat = '餐饮';
+let selectedCat = '购物';
 document.querySelectorAll('.cat-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('selected'));
@@ -594,18 +584,15 @@ document.getElementById('submitManual').addEventListener('click', () => {
   const amount = parseFloat(amountValue);
   if (isNaN(amount) || amount <= 0) { showToast('⚠️ 金额无效'); return; }
 
-  const noteVal = document.getElementById('inputNote').value.trim();
-  const note = noteVal || selectedCat;
   const card = document.getElementById('inputCard').checked;
   const type = selectedCat === '收入' ? 'income' : 'expense';
   const cat = selectedCat === '收入' ? '收入' : selectedCat;
 
-  doAddRecord(type, cat, amount, note, card);
+  doAddRecord(type, cat, amount, cat, card);
 
   // Reset form
   amountValue = '';
   updateAmountDisplay();
-  document.getElementById('inputNote').value = '';
   document.getElementById('inputCard').checked = false;
 });
 
