@@ -1,0 +1,1059 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="记账本">
+<meta name="theme-color" content="#f8f6f0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#2c2c2c" media="(prefers-color-scheme: dark)">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23e67e22'/><text x='50' y='68' text-anchor='middle' font-size='50' fill='white'>📒</text></svg>">
+<link rel="manifest" href="manifest.json">
+<title>记账本</title>
+<style>
+/* ========== Reset & Base ========== */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:16px;-webkit-text-size-adjust:100%}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  background:#f8f6f0;color:#2c2c2c;max-width:480px;margin:0 auto;
+  min-height:100vh;min-height:100dvh;padding-bottom:max(80px, calc(60px + env(safe-area-inset-bottom, 0px)));
+  -webkit-tap-highlight-color:transparent;
+  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+  overscroll-behavior:none;-webkit-overflow-scrolling:touch;
+}
+
+/* ========== Header ========== */
+header{
+  padding:16px 20px 12px;text-align:center;
+  position:sticky;top:0;background:#f8f6f0;z-index:10;
+}
+header h1{font-size:1.2rem;font-weight:700;color:#3d3d3d}
+header .date{font-size:0.85rem;color:#999;margin-top:2px}
+.today-total{
+  margin-top:8px;font-size:1.1rem;font-weight:600;
+  padding:8px 16px;border-radius:12px;display:inline-block;
+  background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.06);
+}
+.today-total.negative{color:#e74c3c}
+.today-total.positive{color:#27ae60}
+.today-total.zero{color:#999}
+
+/* ========== Tab Bar ========== */
+.tab-bar{
+  position:fixed;bottom:0;left:50%;transform:translateX(-50%);
+  width:100%;max-width:480px;display:flex;background:#fff;
+  border-top:1px solid #eee;z-index:20;
+  padding-bottom:env(safe-area-inset-bottom, 0px);
+}
+.tab-btn{
+  flex:1;padding:12px 0;text-align:center;font-size:0.85rem;
+  color:#999;border:none;background:none;cursor:pointer;
+  transition:color .2s;
+}
+.tab-btn.active{color:#e67e22;font-weight:600}
+.tab-btn svg{display:block;margin:0 auto 2px;width:22px;height:22px}
+
+/* ========== Pages ========== */
+.page{display:none;padding:0 16px}
+.page.active{display:block}
+
+/* ========== Voice Button ========== */
+.voice-section{text-align:center;padding:20px 0 12px}
+.voice-btn{
+  width:80px;height:80px;border-radius:50%;border:none;
+  background:linear-gradient(135deg,#e67e22,#f39c12);
+  color:#fff;font-size:2rem;cursor:pointer;
+  box-shadow:0 4px 15px rgba(230,126,34,.35);
+  transition:transform .15s,box-shadow .15s;
+  display:inline-flex;align-items:center;justify-content:center;
+  -webkit-user-select:none;user-select:none;
+  touch-action:manipulation;
+}
+.voice-btn:active{transform:scale(.93)}
+.voice-btn.listening{
+  animation:pulse 1.2s infinite;
+  background:linear-gradient(135deg,#e74c3c,#e67e22);
+}
+@keyframes pulse{
+  0%,100%{box-shadow:0 4px 15px rgba(230,126,34,.35)}
+  50%{box-shadow:0 4px 30px rgba(230,126,34,.6)}
+}
+.voice-hint{font-size:0.78rem;color:#aaa;margin-top:8px}
+.voice-result{
+  margin-top:12px;padding:12px 16px;background:#fff;
+  border-radius:12px;font-size:0.95rem;text-align:center;
+  box-shadow:0 1px 3px rgba(0,0,0,.05);
+  display:none;
+}
+.voice-result.show{display:block}
+.voice-result .parsed{font-weight:600;color:#2c2c2c}
+.voice-result-actions{margin-top:10px;display:flex;gap:10px;justify-content:center}
+.voice-result-actions button{
+  padding:8px 24px;border-radius:20px;border:none;
+  font-size:0.9rem;cursor:pointer;font-weight:600;
+}
+.btn-confirm{background:#27ae60;color:#fff}
+.btn-cancel{background:#eee;color:#666}
+
+/* ========== Manual Input ========== */
+.manual-section{padding:8px 0}
+.manual-toggle{
+  text-align:center;font-size:0.85rem;color:#999;
+  padding:8px;cursor:pointer;
+}
+.manual-form{display:none;padding:8px 0}
+.manual-form.show{display:block}
+.amount-row{
+  display:flex;gap:8px;align-items:center;margin-bottom:10px;
+}
+.amount-row input{
+  flex:1;padding:12px 16px;border:2px solid #e8e8e8;
+  border-radius:12px;font-size:1.3rem;text-align:center;
+  outline:none;transition:border-color .2s;
+  -webkit-appearance:none;appearance:none;
+}
+.amount-row input:focus{border-color:#e67e22}
+.currency{font-size:1rem;color:#999;font-weight:600}
+.cat-row{display:flex;gap:8px;margin-bottom:10px}
+.cat-btn{
+  flex:1;padding:12px 0;border:2px solid #e8e8e8;
+  border-radius:12px;background:#fff;font-size:0.95rem;
+  cursor:pointer;transition:all .15s;text-align:center;
+}
+.cat-btn.selected{border-color:#e67e22;background:#fef5ec;color:#e67e22;font-weight:600}
+.cat-btn.income-btn.selected{border-color:#27ae60;background:#edfaf0;color:#27ae60}
+.note-row input{
+  width:100%;padding:10px 14px;border:2px solid #e8e8e8;
+  border-radius:12px;font-size:0.95rem;outline:none;
+  margin-bottom:10px;
+  -webkit-appearance:none;appearance:none;
+}
+.note-row input:focus{border-color:#e67e22}
+.card-row{
+  display:flex;align-items:center;gap:8px;margin-bottom:12px;
+  font-size:0.9rem;color:#666;
+}
+.card-row input[type=checkbox]{width:18px;height:18px;accent-color:#e67e22}
+.submit-btn{
+  width:100%;padding:14px;border:none;border-radius:12px;
+  background:#e67e22;color:#fff;font-size:1.1rem;font-weight:600;
+  cursor:pointer;transition:background .2s;
+}
+.submit-btn:active{background:#d35400}
+
+/* ========== Records List ========== */
+.records-section{margin-top:12px}
+.section-title{
+  font-size:0.85rem;color:#999;font-weight:600;
+  padding:8px 0;border-bottom:1px solid #eee;margin-bottom:8px;
+  display:flex;justify-content:space-between;align-items:center;
+}
+.undo-btn{font-size:0.8rem;color:#e74c3c;background:none;border:none;cursor:pointer}
+.record-item{
+  display:flex;align-items:center;padding:10px 12px;
+  background:#fff;border-radius:10px;margin-bottom:6px;
+  box-shadow:0 1px 2px rgba(0,0,0,.03);
+}
+.record-cat{
+  width:40px;height:40px;border-radius:10px;display:flex;
+  align-items:center;justify-content:center;font-size:0.75rem;
+  font-weight:700;color:#fff;flex-shrink:0;
+}
+.cat-food{background:#e67e22}
+.cat-shop{background:#3498db}
+.cat-home{background:#27ae60}
+.cat-income{background:#1abc9c}
+.record-info{flex:1;margin-left:10px}
+.record-note{font-size:0.95rem;font-weight:500}
+.record-meta{font-size:0.75rem;color:#aaa;margin-top:2px}
+.record-amount{font-weight:600;font-size:1rem}
+.record-amount.expense{color:#e74c3c}
+.record-amount.income{color:#27ae60}
+.record-card{font-size:0.7rem;color:#999;margin-left:4px}
+.empty-hint{text-align:center;padding:40px 20px;color:#ccc;font-size:0.9rem}
+
+/* ========== Stats Page ========== */
+.stats-header{text-align:center;padding:16px 0}
+.month-selector{
+  display:flex;align-items:center;justify-content:center;gap:16px;
+  font-size:1.1rem;font-weight:700;
+}
+.month-nav{
+  width:36px;height:36px;border-radius:50%;border:none;
+  background:#fff;font-size:1rem;cursor:pointer;
+  box-shadow:0 1px 3px rgba(0,0,0,.08);
+}
+.summary-card{
+  background:#fff;border-radius:14px;padding:16px;
+  margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.04);
+}
+.summary-card h3{font-size:0.9rem;color:#999;margin-bottom:10px}
+.summary-row{
+  display:flex;justify-content:space-between;padding:6px 0;
+  font-size:0.95rem;border-bottom:1px solid #f5f5f5;
+}
+.summary-row:last-child{border-bottom:none}
+.summary-row .label{color:#666}
+.summary-row .val{font-weight:600}
+.summary-row .val.red{color:#e74c3c}
+.summary-row .val.green{color:#27ae60}
+.summary-total{
+  display:flex;justify-content:space-between;padding:10px 0 0;
+  margin-top:6px;border-top:2px solid #eee;font-size:1.05rem;font-weight:700;
+}
+.export-btn{
+  width:100%;padding:14px;border:2px dashed #ddd;border-radius:12px;
+  background:#fff;color:#999;font-size:0.95rem;cursor:pointer;margin-top:16px;
+  transition:all .2s;
+}
+.export-btn:active{background:#fafafa;border-color:#e67e22;color:#e67e22}
+
+/* ========== Install Prompt ========== */
+.install-banner{
+  display:none;position:fixed;bottom:calc(70px + env(safe-area-inset-bottom, 0px));left:16px;right:16px;
+  max-width:448px;margin:0 auto;background:#2c2c2c;color:#fff;
+  padding:14px 18px;border-radius:14px;font-size:0.9rem;
+  z-index:30;align-items:center;justify-content:space-between;
+  box-shadow:0 4px 20px rgba(0,0,0,.2);
+}
+.install-banner.show{display:flex}
+.install-banner button{
+  padding:8px 16px;border-radius:20px;border:none;
+  background:#fff;color:#2c2c2c;font-weight:600;cursor:pointer;
+  font-size:0.85rem;flex-shrink:0;margin-left:10px;
+}
+
+/* ========== Toast ========== */
+.toast{
+  position:fixed;top:20px;left:50%;transform:translateX(-50%);
+  background:#2c2c2c;color:#fff;padding:10px 24px;
+  border-radius:20px;font-size:0.9rem;z-index:40;
+  opacity:0;transition:opacity .3s;pointer-events:none;
+}
+.toast.show{opacity:1}
+
+/* ========== Confirm Dialog ========== */
+.dialog-overlay{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);
+  z-index:50;align-items:center;justify-content:center;
+}
+.dialog-overlay.show{display:flex}
+.dialog{
+  background:#fff;border-radius:16px;padding:24px;margin:20px;
+  max-width:360px;text-align:center;
+}
+.dialog h3{margin-bottom:8px;font-size:1.1rem}
+.dialog p{color:#666;font-size:0.9rem;margin-bottom:20px}
+.dialog-btns{display:flex;gap:10px}
+.dialog-btns button{
+  flex:1;padding:12px;border-radius:12px;border:none;
+  font-size:0.95rem;cursor:pointer;font-weight:600;
+}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header>
+  <h1>📒 记账本</h1>
+  <div class="date" id="headerDate"></div>
+  <div class="today-total zero" id="todayTotal">今日 — 元</div>
+</header>
+
+<!-- ========== Page 1: 记账 ========== -->
+<div class="page active" id="pageRecord">
+
+  <!-- Voice -->
+  <div class="voice-section">
+    <button class="voice-btn" id="voiceBtn" title="按住说话">🎤</button>
+    <div class="voice-hint" id="voiceHint">点按说话，说完松手</div>
+    <div class="voice-result" id="voiceResult">
+      <div class="parsed" id="voiceParsed"></div>
+      <div class="voice-result-actions">
+        <button class="btn-cancel" id="voiceCancel">取消</button>
+        <button class="btn-confirm" id="voiceConfirm">✓ 确认</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Manual -->
+  <div class="manual-section">
+    <div class="manual-toggle" id="manualToggle">✍️ 手动记账 ▾</div>
+    <div class="manual-form" id="manualForm">
+      <div class="amount-row">
+        <input type="number" id="inputAmount" placeholder="金额" inputmode="decimal" step="0.01">
+        <span class="currency">元</span>
+      </div>
+      <div class="cat-row">
+        <button class="cat-btn selected" data-cat="餐饮" id="catFood">🍜 餐饮</button>
+        <button class="cat-btn" data-cat="购物" id="catShop">🛍 购物</button>
+        <button class="cat-btn" data-cat="家庭" id="catHome">🏠 家庭</button>
+        <button class="cat-btn income-btn" data-cat="收入" id="catIncome">💰 收入</button>
+      </div>
+      <div class="note-row">
+        <input type="text" id="inputNote" placeholder="备注（选填）">
+      </div>
+      <div class="card-row">
+        <input type="checkbox" id="inputCard">
+        <label for="inputCard">刷卡消费</label>
+      </div>
+      <button class="submit-btn" id="submitManual">✓ 记一笔</button>
+    </div>
+  </div>
+
+  <!-- Today's Records -->
+  <div class="records-section">
+    <div class="section-title">
+      <span>📋 今日记录</span>
+      <button class="undo-btn" id="undoBtn">↩ 撤销</button>
+    </div>
+    <div id="recordsList"></div>
+  </div>
+</div>
+
+<!-- ========== Page 2: 统计 ========== -->
+<div class="page" id="pageStats">
+  <div class="stats-header">
+    <div class="month-selector">
+      <button class="month-nav" id="prevMonth">‹</button>
+      <span id="statsMonth">2026年6月</span>
+      <button class="month-nav" id="nextMonth">›</button>
+    </div>
+  </div>
+  <div id="statsContent"></div>
+  <button class="export-btn" id="exportBtn">📤 导出 Markdown 文件</button>
+</div>
+
+<!-- Tab Bar -->
+<div class="tab-bar">
+  <button class="tab-btn active" data-tab="record">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+    记账
+  </button>
+  <button class="tab-btn" data-tab="stats">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="18" rx="1"/><rect x="14" y="8" width="7" height="13" rx="1"/></svg>
+    统计
+  </button>
+</div>
+
+<!-- Install Banner -->
+<div class="install-banner" id="installBanner">
+  <span>添加到桌面，使用更方便</span>
+  <button id="installBtn">添加</button>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Confirm Dialog -->
+<div class="dialog-overlay" id="dialogOverlay">
+  <div class="dialog">
+    <h3 id="dialogTitle"></h3>
+    <p id="dialogMsg"></p>
+    <div class="dialog-btns">
+      <button class="btn-cancel" id="dialogNo">取消</button>
+      <button class="btn-confirm" id="dialogYes">确认</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// DATA LAYER
+// ============================================================
+const STORAGE_KEY = 'expense_records';
+
+function loadRecords() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+  catch { return []; }
+}
+function saveRecords(records) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+}
+
+function today() { return new Date().toISOString().slice(0,10); }
+function now() { return new Date(); }
+function formatDate(d) { return d.toISOString().slice(0,10); }
+
+// ============================================================
+// CATEGORY DETECTION (matching expense-rules.md)
+// ============================================================
+const CATEGORY_KEYWORDS = {
+  '餐饮': ['吃饭','麦当劳','甜品','买水','买菜','咖啡','饮料','水果','早餐','午餐','晚餐',
+           '零食','面包','奶茶','牛奶','烧烤','火锅','面条','米饭','外卖','食堂','小吃',
+           '饼','蛋糕','冰淇淋','酒','茶','可乐','雪碧','柠檬茶','果汁','豆浆','包子',
+           '饺子','馄饨','米粉','米线','麻辣烫','炸鸡','汉堡','披萨','寿司','盒饭'],
+  '家庭': ['停车','打车','充电','水费','电费','煤气','房租','物业','加油','公交','地铁',
+           '过路费','快递','维修','水电','网费','话费','罚款'],
+  '购物': ['购物','买药','日用品','茶叶','数据线','衣服','鞋子','化妆品','洗护','纸巾',
+           '牙膏','洗发水','沐浴露','洗衣液','垃圾袋','电池'],
+};
+const INCOME_KEYWORDS = ['工资','补贴','收入','奖金','报销','退款','红包','兼职','理财','利息'];
+
+function detectCategory(text) {
+  for (const [cat, kws] of Object.entries(CATEGORY_KEYWORDS)) {
+    for (const kw of kws) {
+      if (text.includes(kw)) return cat;
+    }
+  }
+  return null;
+}
+
+function detectIncome(text) {
+  for (const kw of INCOME_KEYWORDS) {
+    if (text.includes(kw)) return kw;
+  }
+  return null;
+}
+
+function extractAmount(text) {
+  // Match decimal or integer number (not part of a date like 2026)
+  const matches = [...text.matchAll(/(\d+\.?\d*)/g)];
+  if (matches.length === 0) return null;
+  // Filter out year-like numbers (202x)
+  const amounts = matches.map(m => parseFloat(m[1])).filter(a => a < 2000 || a > 2100);
+  if (amounts.length === 0) {
+    // If only year-like numbers, try them
+    const allAmts = matches.map(m => parseFloat(m[1]));
+    return allAmts[allAmts.length - 1];
+  }
+  return amounts[amounts.length - 1];
+}
+
+function parseVoiceText(raw) {
+  let text = raw.trim();
+  if (!text) return null;
+
+  // Check card flag
+  let card = false;
+  if (text.includes('刷卡')) { card = true; text = text.replace(/[,，]?\s*刷卡/g, '').trim(); }
+  if (text.includes(',刷卡')) { card = true; text = text.replace(',刷卡','').trim(); }
+
+  // Check income
+  let type = 'expense';
+  let category = null;
+  let incomeKeyword = null;
+
+  if (text.startsWith('+') || text.startsWith('＋')) {
+    type = 'income';
+    text = text.replace(/^[+＋]/, '').trim();
+  }
+  if (!type || type === 'expense') {
+    incomeKeyword = detectIncome(text);
+    if (incomeKeyword) {
+      type = 'income';
+      category = incomeKeyword;
+      text = text.replace(incomeKeyword, '').trim();
+    }
+  }
+
+  // Extract amount
+  const amount = extractAmount(text);
+  if (amount === null) return { error: '未识别到金额，请说数字' };
+  let remaining = text.replace(/[,，]?\s*\d+\.?\d*\s*元?\s*$/, '').replace(/\d+\.?\d*/, '').trim();
+
+  // Detect category from remaining text
+  if (category) {
+    // Already set from income detection
+  } else {
+    category = detectCategory(remaining);
+    if (category) {
+      remaining = remaining.replace(new RegExp(category), '').trim();
+    }
+  }
+
+  // Default category
+  if (!category) {
+    category = type === 'income' ? '收入' : '购物';
+  }
+
+  // Note = remaining text after removing category and amount
+  let note = remaining || category;
+  if (type === 'expense' && !remaining) note = category;
+
+  return { type, category, amount, note, card };
+}
+
+// ============================================================
+// RECORD OPERATIONS
+// ============================================================
+function addRecord(type, category, amount, note, card) {
+  if (amount > 5000) {
+    return { needConfirm: true, type, category, amount, note, card };
+  }
+  const records = loadRecords();
+  records.push({
+    id: Date.now(),
+    date: today(),
+    type,
+    category,
+    note: note || category,
+    amount: Math.round(amount * 100) / 100,
+    card: !!card
+  });
+  saveRecords(records);
+  return { success: true };
+}
+
+function undoLastExpense() {
+  const records = loadRecords();
+  const t = today();
+  // Find today's expense records
+  for (let i = records.length - 1; i >= 0; i--) {
+    if (records[i].date === t && records[i].type === 'expense') {
+      const removed = records.splice(i, 1)[0];
+      saveRecords(records);
+      return removed;
+    }
+  }
+  return null;
+}
+
+function getTodayRecords() {
+  const t = today();
+  return loadRecords().filter(r => r.date === t);
+}
+
+function getMonthRecords(year, month) {
+  const prefix = `${year}-${String(month).padStart(2,'0')}`;
+  return loadRecords().filter(r => r.date.startsWith(prefix));
+}
+
+function computeMonthSummary(year, month) {
+  const records = getMonthRecords(year, month);
+  let income = 0, expense = 0, cardTotal = 0;
+  const cats = {};
+  for (const r of records) {
+    if (r.type === 'income') {
+      income += r.amount;
+    } else {
+      expense += r.amount;
+      cats[r.category] = (cats[r.category] || 0) + r.amount;
+      if (r.card) cardTotal += r.amount;
+    }
+  }
+  return { income, expense, cats, cardTotal, balance: income - expense, count: records.length };
+}
+
+// ============================================================
+// RENDER
+// ============================================================
+function renderAll() {
+  renderHeader();
+  renderTodayRecords();
+  renderStats();
+}
+
+function renderHeader() {
+  const d = now();
+  const weekdays = ['日','一','二','三','四','五','六'];
+  document.getElementById('headerDate').textContent =
+    `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日 周${weekdays[d.getDay()]}`;
+
+  const todayRecs = getTodayRecords();
+  let total = 0;
+  for (const r of todayRecs) {
+    total += r.type === 'income' ? r.amount : -r.amount;
+  }
+  const el = document.getElementById('todayTotal');
+  el.classList.remove('negative','positive','zero');
+  if (total < 0) { el.classList.add('negative'); el.textContent = `今日支出: -${Math.abs(total).toFixed(2)} 元`; }
+  else if (total > 0) { el.classList.add('positive'); el.textContent = `今日结余: +${total.toFixed(2)} 元`; }
+  else { el.classList.add('zero'); el.textContent = '今日 — 元'; }
+}
+
+function renderTodayRecords() {
+  const records = getTodayRecords();
+  const list = document.getElementById('recordsList');
+  if (records.length === 0) {
+    list.innerHTML = '<div class="empty-hint">今天还没有记录<br>🎤 用语音或 ✍️ 手动记一笔吧</div>';
+    return;
+  }
+  let html = '';
+  for (const r of [...records].reverse()) {
+    const catClass = r.type === 'income' ? 'cat-income' :
+      r.category === '餐饮' ? 'cat-food' :
+      r.category === '购物' ? 'cat-shop' : 'cat-home';
+    const catEmoji = r.type === 'income' ? '💰' :
+      r.category === '餐饮' ? '🍜' :
+      r.category === '购物' ? '🛍' : '🏠';
+    const amountClass = r.type === 'income' ? 'income' : 'expense';
+    const sign = r.type === 'income' ? '+' : '-';
+    html += `
+      <div class="record-item">
+        <div class="record-cat ${catClass}">${catEmoji}</div>
+        <div class="record-info">
+          <div class="record-note">${esc(r.note)}</div>
+          <div class="record-meta">${esc(r.category)}${r.card ? ' · <span class="record-card">刷卡</span>' : ''}</div>
+        </div>
+        <div class="record-amount ${amountClass}">${sign}${r.amount.toFixed(2)}</div>
+      </div>`;
+  }
+  list.innerHTML = html;
+}
+
+function renderStats() {
+  const d = now();
+  const m = d.getMonth() + 1;
+  const y = d.getFullYear();
+  renderStatsMonth(y, m);
+}
+
+function renderStatsMonth(year, month) {
+  document.getElementById('statsMonth').textContent = `${year}年${month}月`;
+  const s = computeMonthSummary(year, month);
+  const el = document.getElementById('statsContent');
+
+  // Category breakdown
+  let catHtml = '';
+  const catOrder = ['餐饮','购物','家庭'];
+  for (const cat of catOrder) {
+    const amt = s.cats[cat] || 0;
+    if (amt > 0) catHtml += `<div class="summary-row"><span class="label">${cat}</span><span class="val red">-${amt.toFixed(2)}元</span></div>`;
+  }
+  // Other categories
+  for (const [cat, amt] of Object.entries(s.cats)) {
+    if (!catOrder.includes(cat)) {
+      catHtml += `<div class="summary-row"><span class="label">${cat}</span><span class="val red">-${amt.toFixed(2)}元</span></div>`;
+    }
+  }
+  if (!catHtml) catHtml = '<div class="summary-row"><span class="label">暂无支出</span><span class="val">-</span></div>';
+
+  let cardHtml = '';
+  if (s.cardTotal > 0) {
+    cardHtml = `<div class="summary-row"><span class="label">刷卡累计消费</span><span class="val red">-${s.cardTotal.toFixed(2)}元</span></div>`;
+  }
+
+  el.innerHTML = `
+    <div class="summary-card">
+      <h3>📊 本月支出分类</h3>
+      ${catHtml}
+      <div class="summary-total">
+        <span>支出合计</span>
+        <span class="val red">-${s.expense.toFixed(2)}元</span>
+      </div>
+    </div>
+    <div class="summary-card">
+      <h3>📋 本月汇总</h3>
+      <div class="summary-row"><span class="label">收入累计</span><span class="val green">+${s.income.toFixed(2)}元</span></div>
+      <div class="summary-row"><span class="label">支出累计</span><span class="val red">-${s.expense.toFixed(2)}元</span></div>
+      ${cardHtml}
+      <div class="summary-total">
+        <span>收支余额</span>
+        <span class="val ${s.balance >= 0 ? 'green' : 'red'}">${s.balance >= 0 ? '+' : ''}${s.balance.toFixed(2)}元</span>
+      </div>
+    </div>
+    <div class="summary-card">
+      <div style="text-align:center;color:#999;font-size:0.85rem">共 ${s.count} 条记录</div>
+    </div>
+  `;
+}
+
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+// ============================================================
+// TOAST & DIALOG
+// ============================================================
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+function showDialog(title, msg) {
+  return new Promise(resolve => {
+    document.getElementById('dialogTitle').textContent = title;
+    document.getElementById('dialogMsg').textContent = msg;
+    const overlay = document.getElementById('dialogOverlay');
+    overlay.classList.add('show');
+    document.getElementById('dialogYes').onclick = () => { overlay.classList.remove('show'); resolve(true); };
+    document.getElementById('dialogNo').onclick = () => { overlay.classList.remove('show'); resolve(false); };
+  });
+}
+
+// ============================================================
+// VOICE INPUT
+// ============================================================
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+let recognition = null;
+let pendingVoiceRecord = null;
+
+if (SpeechRecognition) {
+  recognition = new SpeechRecognition();
+  recognition.lang = 'zh-CN';
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+
+  recognition.onresult = (event) => {
+    const text = event.results[0][0].transcript.trim();
+    document.getElementById('voiceBtn').classList.remove('listening');
+    document.getElementById('voiceHint').textContent = '点按说话，说完松手';
+
+    if (!text) return;
+    const parsed = parseVoiceText(text);
+    if (!parsed) return;
+    if (parsed.error) {
+      showToast('⚠️ ' + parsed.error);
+      return;
+    }
+
+    pendingVoiceRecord = parsed;
+    const sign = parsed.type === 'income' ? '+' : '-';
+    const cardTag = parsed.card ? ' · 刷卡' : '';
+    document.getElementById('voiceParsed').textContent =
+      `${parsed.type === 'income' ? '💰' : '💸'} ${parsed.category} · ${parsed.note} · ${sign}${parsed.amount.toFixed(2)}元${cardTag}`;
+    document.getElementById('voiceResult').classList.add('show');
+  };
+
+  recognition.onerror = (event) => {
+    document.getElementById('voiceBtn').classList.remove('listening');
+    document.getElementById('voiceHint').textContent = '点按说话，说完松手';
+    if (event.error === 'not-allowed') {
+      showToast('⚠️ 请允许麦克风权限');
+    } else if (event.error !== 'aborted') {
+      showToast('⚠️ 未听清，请重试');
+    }
+  };
+
+  recognition.onend = () => {
+    document.getElementById('voiceBtn').classList.remove('listening');
+    document.getElementById('voiceHint').textContent = '点按说话，说完松手';
+  };
+}
+
+// Voice button: long press for iOS, click for others
+let voicePressed = false;
+const voiceBtn = document.getElementById('voiceBtn');
+
+voiceBtn.addEventListener('pointerdown', (e) => {
+  e.preventDefault();
+  voicePressed = true;
+  if (recognition) {
+    try {
+      recognition.start();
+      voiceBtn.classList.add('listening');
+      document.getElementById('voiceHint').textContent = '正在听...';
+    } catch(e) {}
+  }
+});
+
+voiceBtn.addEventListener('pointerup', (e) => {
+  e.preventDefault();
+  voicePressed = false;
+  if (recognition) {
+    try { recognition.stop(); } catch(e) {}
+  }
+});
+
+voiceBtn.addEventListener('pointerleave', () => {
+  if (voicePressed && recognition) {
+    try { recognition.stop(); } catch(e) {}
+    voiceBtn.classList.remove('listening');
+    document.getElementById('voiceHint').textContent = '点按说话，说完松手';
+  }
+  voicePressed = false;
+});
+
+// Fallback for desktop click
+voiceBtn.addEventListener('click', (e) => {
+  if (!SpeechRecognition) {
+    showToast('⚠️ 此浏览器不支持语音，请手动输入');
+  }
+});
+
+document.getElementById('voiceConfirm').addEventListener('click', () => {
+  if (!pendingVoiceRecord) return;
+  const r = pendingVoiceRecord;
+  document.getElementById('voiceResult').classList.remove('show');
+  doAddRecord(r.type, r.category, r.amount, r.note, r.card);
+  pendingVoiceRecord = null;
+});
+
+document.getElementById('voiceCancel').addEventListener('click', () => {
+  pendingVoiceRecord = null;
+  document.getElementById('voiceResult').classList.remove('show');
+});
+
+// ============================================================
+// MANUAL INPUT
+// ============================================================
+document.getElementById('manualToggle').addEventListener('click', () => {
+  document.getElementById('manualForm').classList.toggle('show');
+  const el = document.getElementById('manualToggle');
+  el.textContent = document.getElementById('manualForm').classList.contains('show') ? '✍️ 手动记账 ▴' : '✍️ 手动记账 ▾';
+});
+
+// Category selection
+let selectedCat = '餐饮';
+document.querySelectorAll('.cat-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    selectedCat = btn.dataset.cat;
+  });
+});
+
+document.getElementById('submitManual').addEventListener('click', () => {
+  const amountStr = document.getElementById('inputAmount').value.trim();
+  if (!amountStr) { showToast('⚠️ 请输入金额'); return; }
+  const amount = parseFloat(amountStr);
+  if (isNaN(amount) || amount <= 0) { showToast('⚠️ 金额无效'); return; }
+
+  const noteVal = document.getElementById('inputNote').value.trim();
+  const note = noteVal || selectedCat;
+  const card = document.getElementById('inputCard').checked;
+  const type = selectedCat === '收入' ? 'income' : 'expense';
+  const cat = selectedCat === '收入' ? '收入' : selectedCat;
+
+  doAddRecord(type, cat, amount, note, card);
+
+  // Reset form
+  document.getElementById('inputAmount').value = '';
+  document.getElementById('inputNote').value = '';
+  document.getElementById('inputCard').checked = false;
+});
+
+// ============================================================
+// ADD RECORD (with >5000 confirm)
+// ============================================================
+async function doAddRecord(type, category, amount, note, card) {
+  // Check amount > 5000
+  if (type === 'expense' && amount > 5000) {
+    const confirmed = await showDialog(
+      '⚠️ 金额确认',
+      `这笔金额较大（${amount.toFixed(2)}元），确认记录吗？`
+    );
+    if (!confirmed) return;
+  }
+
+  // Check income > 50000
+  if (type === 'income' && amount > 50000) {
+    const confirmed = await showDialog(
+      '⚠️ 金额确认',
+      `这笔收入较大（${amount.toFixed(2)}元），确认记录吗？`
+    );
+    if (!confirmed) return;
+  }
+
+  const records = loadRecords();
+  records.push({
+    id: Date.now(),
+    date: today(),
+    type,
+    category,
+    note: note || category,
+    amount: Math.round(amount * 100) / 100,
+    card: !!card
+  });
+  saveRecords(records);
+
+  const sign = type === 'income' ? '+' : '-';
+  showToast(`✅ ${category} · ${note} · ${sign}${amount.toFixed(2)}元`);
+  renderAll();
+}
+
+// ============================================================
+// UNDO
+// ============================================================
+document.getElementById('undoBtn').addEventListener('click', async () => {
+  const confirmed = await showDialog('撤销确认', '撤销今天最后一条支出记录？');
+  if (!confirmed) return;
+  const removed = undoLastExpense();
+  if (removed) {
+    showToast(`↩ 已撤销: ${removed.category} ${removed.amount.toFixed(2)}元`);
+    renderAll();
+  } else {
+    showToast('今天没有可撤销的记录');
+  }
+});
+
+// ============================================================
+// TAB SWITCHING
+// ============================================================
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const tab = btn.dataset.tab;
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    if (tab === 'record') {
+      document.getElementById('pageRecord').classList.add('active');
+      renderAll();
+    } else {
+      document.getElementById('pageStats').classList.add('active');
+      renderStats();
+    }
+  });
+});
+
+// ============================================================
+// MONTH NAVIGATION (Stats page)
+// ============================================================
+let statsYear = now().getFullYear();
+let statsMonth = now().getMonth() + 1;
+
+document.getElementById('prevMonth').addEventListener('click', () => {
+  if (statsMonth === 1) { statsMonth = 12; statsYear--; }
+  else statsMonth--;
+  renderStatsMonth(statsYear, statsMonth);
+});
+document.getElementById('nextMonth').addEventListener('click', () => {
+  const d = now();
+  if (statsYear === d.getFullYear() && statsMonth === d.getMonth() + 1) return;
+  if (statsMonth === 12) { statsMonth = 1; statsYear++; }
+  else statsMonth++;
+  renderStatsMonth(statsYear, statsMonth);
+});
+
+// ============================================================
+// EXPORT MARKDOWN
+// ============================================================
+document.getElementById('exportBtn').addEventListener('click', () => {
+  const s = computeMonthSummary(statsYear, statsMonth);
+  const records = getMonthRecords(statsYear, statsMonth);
+  if (records.length === 0) { showToast('本月无记录可导出'); return; }
+
+  // Group by date
+  const byDate = {};
+  for (const r of records) {
+    if (!byDate[r.date]) byDate[r.date] = { income: [], expense: [] };
+    byDate[r.date][r.type === 'income' ? 'income' : 'expense'].push(r);
+  }
+  const sortedDates = Object.keys(byDate).sort();
+
+  const weekdays = ['日','一','二','三','四','五','六'];
+  let md = `# ${statsYear}年${statsMonth}月收支记录\n\n`;
+
+  for (const dateStr of sortedDates) {
+    const d = new Date(dateStr + 'T00:00:00');
+    const parts = dateStr.split('-');
+    const mdDay = `${parseInt(parts[1])}月${parseInt(parts[2])}日（周${weekdays[d.getDay()]}）`;
+    md += `## ${mdDay}\n`;
+
+    const day = byDate[dateStr];
+    if (day.income.length > 0) {
+      md += `### 收入\n`;
+      for (const r of day.income) {
+        md += `- 【${r.category}】${r.note} — +${r.amount.toFixed(2)}元\n`;
+      }
+      md += '\n';
+    }
+    md += `### 支出\n`;
+    for (const r of day.expense) {
+      md += `- 【${r.category}】${r.note} — ${r.amount.toFixed(2)}元\n`;
+    }
+    md += '\n';
+
+    // Daily stats
+    md += `### 本日统计\n| 类别 | 金额 |\n|------|------|\n`;
+    if (day.income.length > 0) {
+      const incTotal = day.income.reduce((a,b) => a + b.amount, 0);
+      md += `| 收入 | +${incTotal.toFixed(2)}元 |\n`;
+    }
+    const dayCats = {};
+    for (const r of day.expense) {
+      dayCats[r.category] = (dayCats[r.category] || 0) + r.amount;
+    }
+    for (const [cat, amt] of Object.entries(dayCats)) {
+      md += `| ${cat} | -${amt.toFixed(2)}元 |\n`;
+    }
+    const dayTotal = day.income.reduce((a,b) => a + b.amount, 0) - day.expense.reduce((a,b) => a + b.amount, 0);
+    md += `| **总计** | **${dayTotal >= 0 ? '+' : ''}${dayTotal.toFixed(2)}元** |\n\n`;
+  }
+
+  // Monthly summary
+  md += `<!-- SUMMARY_START -->\n## 本月汇总（自动生成）\n### 本月支出分类汇总\n| 类别 | 金额 |\n|------|------|\n`;
+  const catOrder = ['餐饮','购物','家庭'];
+  for (const cat of catOrder) {
+    const amt = s.cats[cat] || 0;
+    if (amt > 0) md += `| ${cat} | -${amt.toFixed(2)}元 |\n`;
+  }
+  for (const [cat, amt] of Object.entries(s.cats)) {
+    if (!catOrder.includes(cat)) md += `| ${cat} | -${amt.toFixed(2)}元 |\n`;
+  }
+  md += `| **合计** | **-${s.expense.toFixed(2)}元** |\n\n`;
+  md += `### 本月汇总\n- 收入累计：+${s.income.toFixed(2)}元\n- 支出累计：-${s.expense.toFixed(2)}元\n- 收支余额：${s.balance >= 0 ? '+' : ''}${s.balance.toFixed(2)}元\n`;
+  if (s.cardTotal > 0) md += `- 刷卡累计消费：-${s.cardTotal.toFixed(2)}元\n`;
+  md += `<!-- SUMMARY_END -->\n`;
+
+  // Download as file
+  const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${statsYear}-${String(statsMonth).padStart(2,'0')}.md`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('📤 已导出 Markdown 文件');
+});
+
+// ============================================================
+// PWA INSTALL
+// ============================================================
+let deferredPrompt = null;
+
+// Detect iOS
+const isIOS = /iphone|ipad|ipod/.test(navigator.userAgent.toLowerCase());
+const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+  || navigator.standalone
+  || window.location.search.includes('utm_source=pwa');
+
+// Show install banner only if not already installed
+if (isIOS && !isStandalone) {
+  // iOS: show after a short delay so user sees the app first
+  setTimeout(() => {
+    document.getElementById('installBanner').classList.add('show');
+  }, 3000);
+}
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  if (!isIOS && !isStandalone) {
+    document.getElementById('installBanner').classList.add('show');
+  }
+});
+
+document.getElementById('installBtn').addEventListener('click', async () => {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    const result = await deferredPrompt.userChoice;
+    deferredPrompt = null;
+    document.getElementById('installBanner').classList.remove('show');
+  } else if (isIOS) {
+    // Show iOS-specific guidance
+    const overlay = document.getElementById('dialogOverlay');
+    document.getElementById('dialogTitle').textContent = '添加到主屏幕';
+    document.getElementById('dialogMsg').textContent = '点击 Safari 底部中间的 ↑ 分享按钮，然后向左滑动找到「添加到主屏幕」即可';
+    overlay.classList.add('show');
+    document.getElementById('dialogYes').onclick = () => { overlay.classList.remove('show'); };
+    document.getElementById('dialogNo').onclick = () => {
+      overlay.classList.remove('show');
+      document.getElementById('installBanner').classList.remove('show');
+    };
+  }
+});
+
+// ============================================================
+// SERVICE WORKER
+// ============================================================
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+
+// ============================================================
+// INIT
+// ============================================================
+renderAll();
+</script>
+</body>
+</html>
