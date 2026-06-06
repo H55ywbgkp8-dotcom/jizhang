@@ -848,7 +848,22 @@ document.getElementById('installBtn').addEventListener('click', async () => {
 // SERVICE WORKER
 // ============================================================
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').catch(() => {});
+  navigator.serviceWorker.register('sw.js').then(function(reg) {
+    // When a new SW is waiting, show update prompt
+    reg.addEventListener('updatefound', function() {
+      var newSW = reg.installing;
+      if (!newSW) return;
+      newSW.addEventListener('statechange', function() {
+        if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
+          // New version available
+          var toast = document.getElementById('toast');
+          toast.textContent = '🔄 新版本已就绪，关掉重开即可';
+          toast.classList.add('show');
+          setTimeout(function() { toast.classList.remove('show'); }, 5000);
+        }
+      });
+    });
+  }).catch(function() {});
 }
 
 // ============================================================
