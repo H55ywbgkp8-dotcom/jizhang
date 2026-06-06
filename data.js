@@ -1,13 +1,8 @@
-// Historical expense data import — runs once when localStorage is empty
+// Historical expense data import — runs once, never repeats
 (function() {
   var STORAGE_KEY = 'expense_records';
-  var existing = localStorage.getItem(STORAGE_KEY);
-  if (existing) {
-    try {
-      var data = JSON.parse(existing);
-      if (data.length > 0) return; // Already has data, skip import
-    } catch(e) {}
-  }
+  var IMPORT_FLAG = 'expense_v1_imported';
+  if (localStorage.getItem(IMPORT_FLAG)) return; // Already imported
 
   // Import historical records from May-June 2026
   var IMPORT_DATA = 
@@ -1105,5 +1100,6 @@
   }
   allRecords = allRecords.concat(IMPORT_DATA);
   localStorage.setItem(STORAGE_KEY, JSON.stringify(allRecords));
+  localStorage.setItem(IMPORT_FLAG, '1');
   console.log('已导入 ' + IMPORT_DATA.length + ' 条历史记录');
 })();
