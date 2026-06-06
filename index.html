@@ -59,52 +59,9 @@ header .date{font-size:0.85rem;color:#999;margin-top:2px}
 .page{display:none;padding:0 16px}
 .page.active{display:block}
 
-/* ========== Voice Button ========== */
-.voice-section{text-align:center;padding:20px 0 12px}
-.voice-btn{
-  width:80px;height:80px;border-radius:50%;border:none;
-  background:linear-gradient(135deg,#e67e22,#f39c12);
-  color:#fff;font-size:2rem;cursor:pointer;
-  box-shadow:0 4px 15px rgba(230,126,34,.35);
-  transition:transform .15s,box-shadow .15s;
-  display:inline-flex;align-items:center;justify-content:center;
-  -webkit-user-select:none;user-select:none;
-  touch-action:manipulation;
-}
-.voice-btn:active{transform:scale(.93)}
-.voice-btn.listening{
-  animation:pulse 1.2s infinite;
-  background:linear-gradient(135deg,#e74c3c,#e67e22);
-}
-@keyframes pulse{
-  0%,100%{box-shadow:0 4px 15px rgba(230,126,34,.35)}
-  50%{box-shadow:0 4px 30px rgba(230,126,34,.6)}
-}
-.voice-hint{font-size:0.78rem;color:#aaa;margin-top:8px}
-.voice-result{
-  margin-top:12px;padding:12px 16px;background:#fff;
-  border-radius:12px;font-size:0.95rem;text-align:center;
-  box-shadow:0 1px 3px rgba(0,0,0,.05);
-  display:none;
-}
-.voice-result.show{display:block}
-.voice-result .parsed{font-weight:600;color:#2c2c2c}
-.voice-result-actions{margin-top:10px;display:flex;gap:10px;justify-content:center}
-.voice-result-actions button{
-  padding:8px 24px;border-radius:20px;border:none;
-  font-size:0.9rem;cursor:pointer;font-weight:600;
-}
-.btn-confirm{background:#27ae60;color:#fff}
-.btn-cancel{background:#eee;color:#666}
-
 /* ========== Manual Input ========== */
 .manual-section{padding:8px 0}
-.manual-toggle{
-  text-align:center;font-size:0.85rem;color:#999;
-  padding:8px;cursor:pointer;
-}
-.manual-form{display:none;padding:8px 0}
-.manual-form.show{display:block}
+.manual-form{padding:8px 0}
 .amount-row{
   display:flex;gap:8px;align-items:center;margin-bottom:10px;
 }
@@ -251,6 +208,8 @@ header .date{font-size:0.85rem;color:#999;margin-top:2px}
   flex:1;padding:12px;border-radius:12px;border:none;
   font-size:0.95rem;cursor:pointer;font-weight:600;
 }
+.dialog-btns .btn-confirm{background:#27ae60;color:#fff}
+.dialog-btns .btn-cancel{background:#eee;color:#666}
 </style>
 </head>
 <body>
@@ -265,32 +224,18 @@ header .date{font-size:0.85rem;color:#999;margin-top:2px}
 <!-- ========== Page 1: 记账 ========== -->
 <div class="page active" id="pageRecord">
 
-  <!-- Voice -->
-  <div class="voice-section">
-    <button class="voice-btn" id="voiceBtn" title="按住说话">🎤</button>
-    <div class="voice-hint" id="voiceHint">点按说话，说完松手</div>
-    <div class="voice-result" id="voiceResult">
-      <div class="parsed" id="voiceParsed"></div>
-      <div class="voice-result-actions">
-        <button class="btn-cancel" id="voiceCancel">取消</button>
-        <button class="btn-confirm" id="voiceConfirm">✓ 确认</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Manual -->
+  <!-- Manual Input -->
   <div class="manual-section">
-    <div class="manual-toggle" id="manualToggle">✍️ 手动记账 ▾</div>
-    <div class="manual-form" id="manualForm">
+    <div class="manual-form">
       <div class="amount-row">
-        <input type="number" id="inputAmount" placeholder="金额" inputmode="decimal" step="0.01">
+        <input type="number" id="inputAmount" placeholder="输入金额" inputmode="decimal" step="0.01">
         <span class="currency">元</span>
       </div>
       <div class="cat-row">
-        <button class="cat-btn selected" data-cat="餐饮" id="catFood">🍜 餐饮</button>
-        <button class="cat-btn" data-cat="购物" id="catShop">🛍 购物</button>
-        <button class="cat-btn" data-cat="家庭" id="catHome">🏠 家庭</button>
-        <button class="cat-btn income-btn" data-cat="收入" id="catIncome">💰 收入</button>
+        <button class="cat-btn selected" data-cat="餐饮">🍜 餐饮</button>
+        <button class="cat-btn" data-cat="购物">🛍 购物</button>
+        <button class="cat-btn" data-cat="家庭">🏠 家庭</button>
+        <button class="cat-btn income-btn" data-cat="收入">💰 收入</button>
       </div>
       <div class="note-row">
         <input type="text" id="inputNote" placeholder="备注（选填）">
@@ -378,125 +323,8 @@ function now() { return new Date(); }
 function formatDate(d) { return d.toISOString().slice(0,10); }
 
 // ============================================================
-// CATEGORY DETECTION (matching expense-rules.md)
-// ============================================================
-const CATEGORY_KEYWORDS = {
-  '餐饮': ['吃饭','麦当劳','甜品','买水','买菜','咖啡','饮料','水果','早餐','午餐','晚餐',
-           '零食','面包','奶茶','牛奶','烧烤','火锅','面条','米饭','外卖','食堂','小吃',
-           '饼','蛋糕','冰淇淋','酒','茶','可乐','雪碧','柠檬茶','果汁','豆浆','包子',
-           '饺子','馄饨','米粉','米线','麻辣烫','炸鸡','汉堡','披萨','寿司','盒饭'],
-  '家庭': ['停车','打车','充电','水费','电费','煤气','房租','物业','加油','公交','地铁',
-           '过路费','快递','维修','水电','网费','话费','罚款'],
-  '购物': ['购物','买药','日用品','茶叶','数据线','衣服','鞋子','化妆品','洗护','纸巾',
-           '牙膏','洗发水','沐浴露','洗衣液','垃圾袋','电池'],
-};
-const INCOME_KEYWORDS = ['工资','补贴','收入','奖金','报销','退款','红包','兼职','理财','利息'];
-
-function detectCategory(text) {
-  for (const [cat, kws] of Object.entries(CATEGORY_KEYWORDS)) {
-    for (const kw of kws) {
-      if (text.includes(kw)) return cat;
-    }
-  }
-  return null;
-}
-
-function detectIncome(text) {
-  for (const kw of INCOME_KEYWORDS) {
-    if (text.includes(kw)) return kw;
-  }
-  return null;
-}
-
-function extractAmount(text) {
-  // Match decimal or integer number (not part of a date like 2026)
-  const matches = [...text.matchAll(/(\d+\.?\d*)/g)];
-  if (matches.length === 0) return null;
-  // Filter out year-like numbers (202x)
-  const amounts = matches.map(m => parseFloat(m[1])).filter(a => a < 2000 || a > 2100);
-  if (amounts.length === 0) {
-    // If only year-like numbers, try them
-    const allAmts = matches.map(m => parseFloat(m[1]));
-    return allAmts[allAmts.length - 1];
-  }
-  return amounts[amounts.length - 1];
-}
-
-function parseVoiceText(raw) {
-  let text = raw.trim();
-  if (!text) return null;
-
-  // Check card flag
-  let card = false;
-  if (text.includes('刷卡')) { card = true; text = text.replace(/[,，]?\s*刷卡/g, '').trim(); }
-  if (text.includes(',刷卡')) { card = true; text = text.replace(',刷卡','').trim(); }
-
-  // Check income
-  let type = 'expense';
-  let category = null;
-  let incomeKeyword = null;
-
-  if (text.startsWith('+') || text.startsWith('＋')) {
-    type = 'income';
-    text = text.replace(/^[+＋]/, '').trim();
-  }
-  if (!type || type === 'expense') {
-    incomeKeyword = detectIncome(text);
-    if (incomeKeyword) {
-      type = 'income';
-      category = incomeKeyword;
-      text = text.replace(incomeKeyword, '').trim();
-    }
-  }
-
-  // Extract amount
-  const amount = extractAmount(text);
-  if (amount === null) return { error: '未识别到金额，请说数字' };
-  let remaining = text.replace(/[,，]?\s*\d+\.?\d*\s*元?\s*$/, '').replace(/\d+\.?\d*/, '').trim();
-
-  // Detect category from remaining text
-  if (category) {
-    // Already set from income detection
-  } else {
-    category = detectCategory(remaining);
-    if (category) {
-      remaining = remaining.replace(new RegExp(category), '').trim();
-    }
-  }
-
-  // Default category
-  if (!category) {
-    category = type === 'income' ? '收入' : '购物';
-  }
-
-  // Note = remaining text after removing category and amount
-  let note = remaining || category;
-  if (type === 'expense' && !remaining) note = category;
-
-  return { type, category, amount, note, card };
-}
-
-// ============================================================
 // RECORD OPERATIONS
 // ============================================================
-function addRecord(type, category, amount, note, card) {
-  if (amount > 5000) {
-    return { needConfirm: true, type, category, amount, note, card };
-  }
-  const records = loadRecords();
-  records.push({
-    id: Date.now(),
-    date: today(),
-    type,
-    category,
-    note: note || category,
-    amount: Math.round(amount * 100) / 100,
-    card: !!card
-  });
-  saveRecords(records);
-  return { success: true };
-}
-
 function undoLastExpense() {
   const records = loadRecords();
   const t = today();
@@ -568,7 +396,7 @@ function renderTodayRecords() {
   const records = getTodayRecords();
   const list = document.getElementById('recordsList');
   if (records.length === 0) {
-    list.innerHTML = '<div class="empty-hint">今天还没有记录<br>🎤 用语音或 ✍️ 手动记一笔吧</div>';
+    list.innerHTML = '<div class="empty-hint">今天还没有记录<br>👆 在上面输入金额记一笔吧</div>';
     return;
   }
   let html = '';
@@ -681,121 +509,8 @@ function showDialog(title, msg) {
 }
 
 // ============================================================
-// VOICE INPUT
-// ============================================================
-const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-let recognition = null;
-let pendingVoiceRecord = null;
-
-if (SpeechRecognition) {
-  recognition = new SpeechRecognition();
-  recognition.lang = 'zh-CN';
-  recognition.interimResults = false;
-  recognition.maxAlternatives = 1;
-
-  recognition.onresult = (event) => {
-    const text = event.results[0][0].transcript.trim();
-    document.getElementById('voiceBtn').classList.remove('listening');
-    document.getElementById('voiceHint').textContent = '点按说话，说完松手';
-
-    if (!text) return;
-    const parsed = parseVoiceText(text);
-    if (!parsed) return;
-    if (parsed.error) {
-      showToast('⚠️ ' + parsed.error);
-      return;
-    }
-
-    pendingVoiceRecord = parsed;
-    const sign = parsed.type === 'income' ? '+' : '-';
-    const cardTag = parsed.card ? ' · 刷卡' : '';
-    document.getElementById('voiceParsed').textContent =
-      `${parsed.type === 'income' ? '💰' : '💸'} ${parsed.category} · ${parsed.note} · ${sign}${parsed.amount.toFixed(2)}元${cardTag}`;
-    document.getElementById('voiceResult').classList.add('show');
-  };
-
-  recognition.onerror = (event) => {
-    document.getElementById('voiceBtn').classList.remove('listening');
-    document.getElementById('voiceHint').textContent = '点按说话，说完松手';
-    if (event.error === 'not-allowed') {
-      showToast('⚠️ 请允许麦克风权限');
-    } else if (event.error !== 'aborted') {
-      showToast('⚠️ 未听清，请重试');
-    }
-  };
-
-  recognition.onend = () => {
-    document.getElementById('voiceBtn').classList.remove('listening');
-    document.getElementById('voiceHint').textContent = '点按说话，说完松手';
-  };
-}
-
-// Voice button: press and hold to talk, release to stop
-let voicePressed = false;
-let voicePressTime = 0;
-const voiceBtn = document.getElementById('voiceBtn');
-
-voiceBtn.addEventListener('pointerdown', (e) => {
-  // Do NOT preventDefault — iOS requires the event to be a valid user gesture for speech recognition
-  voicePressed = true;
-  voicePressTime = Date.now();
-  if (recognition) {
-    try {
-      recognition.start();
-      voiceBtn.classList.add('listening');
-      document.getElementById('voiceHint').textContent = '正在听...';
-    } catch(e) {}
-  }
-});
-
-voiceBtn.addEventListener('pointerup', (e) => {
-  voicePressed = false;
-  if (recognition) {
-    try { recognition.stop(); } catch(e) {}
-  }
-});
-
-voiceBtn.addEventListener('pointerleave', () => {
-  // Ignore accidental pointerleave within the first 150ms (finger micro-movement on iOS)
-  if (!voicePressed) return;
-  if (Date.now() - voicePressTime < 150) return;
-  voicePressed = false;
-  if (recognition) {
-    try { recognition.stop(); } catch(e) {}
-    voiceBtn.classList.remove('listening');
-    document.getElementById('voiceHint').textContent = '点按说话，说完松手';
-  }
-});
-
-// Fallback for desktop click
-voiceBtn.addEventListener('click', (e) => {
-  if (!SpeechRecognition) {
-    showToast('⚠️ 此浏览器不支持语音，请手动输入');
-  }
-});
-
-document.getElementById('voiceConfirm').addEventListener('click', () => {
-  if (!pendingVoiceRecord) return;
-  const r = pendingVoiceRecord;
-  document.getElementById('voiceResult').classList.remove('show');
-  doAddRecord(r.type, r.category, r.amount, r.note, r.card);
-  pendingVoiceRecord = null;
-});
-
-document.getElementById('voiceCancel').addEventListener('click', () => {
-  pendingVoiceRecord = null;
-  document.getElementById('voiceResult').classList.remove('show');
-});
-
-// ============================================================
 // MANUAL INPUT
 // ============================================================
-document.getElementById('manualToggle').addEventListener('click', () => {
-  document.getElementById('manualForm').classList.toggle('show');
-  const el = document.getElementById('manualToggle');
-  el.textContent = document.getElementById('manualForm').classList.contains('show') ? '✍️ 手动记账 ▴' : '✍️ 手动记账 ▾';
-});
-
 // Category selection
 let selectedCat = '餐饮';
 document.querySelectorAll('.cat-btn').forEach(btn => {
