@@ -730,13 +730,15 @@ if (SpeechRecognition) {
   };
 }
 
-// Voice button: long press for iOS, click for others
+// Voice button: press and hold to talk, release to stop
 let voicePressed = false;
+let voicePressTime = 0;
 const voiceBtn = document.getElementById('voiceBtn');
 
 voiceBtn.addEventListener('pointerdown', (e) => {
-  e.preventDefault();
+  // Do NOT preventDefault — iOS requires the event to be a valid user gesture for speech recognition
   voicePressed = true;
+  voicePressTime = Date.now();
   if (recognition) {
     try {
       recognition.start();
@@ -747,7 +749,6 @@ voiceBtn.addEventListener('pointerdown', (e) => {
 });
 
 voiceBtn.addEventListener('pointerup', (e) => {
-  e.preventDefault();
   voicePressed = false;
   if (recognition) {
     try { recognition.stop(); } catch(e) {}
@@ -755,12 +756,15 @@ voiceBtn.addEventListener('pointerup', (e) => {
 });
 
 voiceBtn.addEventListener('pointerleave', () => {
-  if (voicePressed && recognition) {
+  // Ignore accidental pointerleave within the first 150ms (finger micro-movement on iOS)
+  if (!voicePressed) return;
+  if (Date.now() - voicePressTime < 150) return;
+  voicePressed = false;
+  if (recognition) {
     try { recognition.stop(); } catch(e) {}
     voiceBtn.classList.remove('listening');
     document.getElementById('voiceHint').textContent = '点按说话，说完松手';
   }
-  voicePressed = false;
 });
 
 // Fallback for desktop click
